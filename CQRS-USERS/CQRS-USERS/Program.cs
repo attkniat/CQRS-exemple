@@ -1,46 +1,31 @@
+using CQRS_USERS.Domain.Commands.Requests;
 using CQRS_USERS.Domain.Handlers;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<ICreateCustomerHandler, CreateCustomerHandler>();
+builder.Services.AddTransient<IFindCustomerByIdHandler, FindCustomerByIdHandler>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapPost("/create-customer", ([FromServices] ICreateCustomerHandler handler, [FromBody] CreateCustomerRequest command) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateTime.Now.AddDays(index),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    return handler.Handle(command);
 })
-.WithName("GetWeatherForecast");
+.WithTags("Customer Create");
+
+app.MapGet("/get-user-by-id/{id}", ([FromServices] IFindCustomerByIdHandler handler) =>
+{
+    var command = new FindCustomerByIdRequest { Id = Guid.NewGuid() };
+    return handler.Handle(command);
+})
+.WithTags("Getting user by Id");
 
 app.Run();
-
-internal record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
